@@ -1,0 +1,53 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 10;
+}
+
+.modalWrap {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 11;
+  padding: 1rem;
+}
+
+.panel {
+  background: #fff;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 32rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.image {
+  width: 100%;
+  max-height: 18rem;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0.375rem;
+  margin-bottom: 0.75rem;
+  background: #f5f5f5;
+}
+
+.title {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.closeButton {
+  margin-top: 1.25rem;
+  width: 100%;
+  padding: 0.5rem;
+  background: #ff3b3b;
+  color: #fff;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 500;
+}
