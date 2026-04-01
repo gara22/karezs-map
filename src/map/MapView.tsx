@@ -120,6 +120,17 @@ const geojson: FeatureCollection = {
         imgUrl: 'https://cdn.9oblin.com/s3/karezs-map/budapest_bench.jpg',
       },
     },
+    {
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [20.146262, 46.250662],
+      },
+      properties: {
+        title: 'Karezs at Kárász utca, Szeged',
+        imgUrl: 'https://cdn.9oblin.com/s3/karezs-map/karasz.png',
+      },
+    },
   ],
 };
 
