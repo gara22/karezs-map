@@ -7,131 +7,18 @@ import { useEffect, useRef, useState } from 'react';
 import type { FeatureCollection } from 'geojson';
 import type { MapRef } from 'react-map-gl/maplibre';
 
-const geojson: FeatureCollection = {
+const emptyFeatureCollection: FeatureCollection = {
   type: 'FeatureCollection',
-  features: [
-    {
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: [12.591225, 55.679548],
-      },
-      properties: {
-        title: 'Karezs at Nyhavn Canal Bridge, Copenhagen',
-        imgUrl: 'https://cdn.9oblin.com/s3/karezs-map/coppenhagen.png',
-      },
-    },
-    {
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: [20.153584, 46.252203],
-      },
-      properties: {
-        title: 'Karezs at Szabadság Úszóház, Szeged',
-        imgUrl: 'https://cdn.9oblin.com/s3/karezs-map/uszohaz.png',
-      },
-    },
-    {
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: [13.732043, 45.546639],
-      },
-      properties: {
-        title: 'Karezs at Koper',
-        imgUrl: 'https://cdn.9oblin.com/s3/karezs-map/koper.jpg',
-      },
-    },
-    {
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: [13.769957, 45.650581],
-      },
-      properties: {
-        title: 'Karezs at Triest',
-        imgUrl: 'https://cdn.9oblin.com/s3/karezs-map/triest.jpg',
-      },
-    },
-    {
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: [13.390219, 52.507636],
-      },
-      properties: {
-        title: 'Karezs at Checkpoint Charlie, Berlin',
-        imgUrl: 'https://cdn.9oblin.com/s3/karezs-map/berlin.jpg',
-      },
-    },
-    {
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: [-113.825001, 36.032896],
-      },
-      properties: {
-        title: 'Karezs at Grand Canyon',
-        imgUrl: 'https://cdn.9oblin.com/s3/karezs-map/grand_canyon.jpg',
-      },
-    },
-    {
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: [14.507619, 46.047119],
-      },
-      properties: {
-        title: 'Karezs at Ljubljana',
-        imgUrl: 'https://cdn.9oblin.com/s3/karezs-map/ljubljana.jpg',
-      },
-    },
-    {
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: [20.20821872791017, 46.46176457622422],
-      },
-      properties: {
-        title: 'Karezs at Mártély',
-        imgUrl: 'https://cdn.9oblin.com/s3/karezs-map/martely.jpg',
-      },
-    },
-    {
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: [19.039044017577424, 47.48962389295302],
-      },
-      properties: {
-        title: 'Karezs at Budapest',
-        imgUrl: 'https://cdn.9oblin.com/s3/karezs-map/budapest_oszlop.jpg',
-      },
-    },
-    {
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: [19.049675645997198, 47.48628300490831],
-      },
-      properties: {
-        title: 'Karezs at Gellért-hegy, Budapest',
-        imgUrl: 'https://cdn.9oblin.com/s3/karezs-map/budapest_bench.jpg',
-      },
-    },
-    {
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: [20.146262, 46.250662],
-      },
-      properties: {
-        title: 'Karezs at Kárász utca, Szeged',
-        imgUrl: 'https://cdn.9oblin.com/s3/karezs-map/karasz.png',
-      },
-    },
-  ],
+  features: [],
+};
+
+const isFeatureCollection = (value: unknown): value is FeatureCollection => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const maybeCollection = value as { type?: unknown; features?: unknown };
+  return maybeCollection.type === 'FeatureCollection' && Array.isArray(maybeCollection.features);
 };
 
 const Pin = () => (
@@ -162,7 +49,10 @@ interface MapViewProps {
 const MapView = ({ onZoomChange }: MapViewProps) => {
   const mapRef = useRef<MapRef | null>(null);
   const clickTokenRef = useRef(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLocationLoading, setIsLocationLoading] = useState(true);
+  const [isMarkersLoading, setIsMarkersLoading] = useState(true);
+  const [markersLoadError, setMarkersLoadError] = useState<string | null>(null);
+  const [geojson, setGeojson] = useState<FeatureCollection>(emptyFeatureCollection);
   const [coords, setCoords] = useState<GeolocationCoordinates | null>(null);
   const [selectedMarker, setSelectedMarker] = useState<MarkerDetail | null>(null);
 
@@ -195,17 +85,46 @@ const MapView = ({ onZoomChange }: MapViewProps) => {
     loca.getCurrentPosition(
       (v) => {
         setCoords(v.coords);
-        setIsLoading(false);
+        setIsLocationLoading(false);
       },
-      () => setIsLoading(false),
+      () => setIsLocationLoading(false),
     );
   }, []);
 
-  if (isLoading) {
+  useEffect(() => {
+    const markersUrl = `${import.meta.env.BASE_URL}markers.json`;
+
+    const loadMarkers = async () => {
+      try {
+        const response = await fetch(markersUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to load markers: ${response.status}`);
+        }
+
+        const data: unknown = await response.json();
+        if (!isFeatureCollection(data)) {
+          throw new Error('Invalid markers file format.');
+        }
+
+        setGeojson(data);
+        setMarkersLoadError(null);
+      } catch (error) {
+        setMarkersLoadError(error instanceof Error ? error.message : 'Failed to load markers');
+      } finally {
+        setIsMarkersLoading(false);
+      }
+    };
+
+    void loadMarkers();
+  }, []);
+
+  if (isLocationLoading || isMarkersLoading) {
+    const loadingText = isMarkersLoading ? 'Loading map markers...' : 'Locating you on the map...';
+
     return (
       <div className={styles.loadingWrap}>
         <div className={styles.loadingSpinner} aria-hidden="true" />
-        <p className={styles.loadingText}>Locating you on the map...</p>
+        <p className={styles.loadingText}>{loadingText}</p>
       </div>
     );
   }
@@ -213,6 +132,12 @@ const MapView = ({ onZoomChange }: MapViewProps) => {
   return (
     <div className={styles.map}>
       <div className={styles.mapCanvas}>
+        {markersLoadError && (
+          <div className={styles.errorBanner} role="status" aria-live="polite">
+            {markersLoadError}
+          </div>
+        )}
+
         <Map
           ref={mapRef}
           onZoom={(event) => onZoomChange?.(event.viewState.zoom)}
