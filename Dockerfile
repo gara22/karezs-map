@@ -18,7 +18,7 @@ ENV VITE_CDN_HOST=MY_APP_CDN_HOST
 RUN npm run build
 
 # Step 2: Serve the app with Nginx
-FROM nginx:alpine
+FROM nginx:1.31.9-alpine
 
 # Copy build output to Nginx's default static files directory
 COPY --from=build /app/dist /usr/share/nginx/html
